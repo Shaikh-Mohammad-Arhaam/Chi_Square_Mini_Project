@@ -1,0 +1,20 @@
+Title: Vehicle Booking Analysis using Chi-Square
+
+Objective:
+Check relationship between vehicle type and booking
+
+Method:
+Chi-Square Test
+
+Data:
+Car: 50/20
+Bike: 30/40
+
+Result:
+p-value < 0.05 → dependent
+
+Tools:
+Python, NumPy, SciPy
+
+Conclusion:
+Vehicle type impacts booking behavior
