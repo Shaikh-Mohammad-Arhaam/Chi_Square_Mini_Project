@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Chi-Square Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #f7f5f0;
+  --bg2:      #ffffff;
+  --bg3:      #efede8;
+  --ink:      #1a1916;
+  --ink2:     #6b6860;
+  --ink3:     #b0ada6;
+  --line:     #e2dfd8;
+  --accent:   #d4561e;
+  --accent-l: #faeee8;
+  --green:    #2a7a4b;
+  --green-l:  #e6f4ec;
+  --amber:    #b87a0a;
+  --amber-l:  #fef3db;
+  --blue:     #1a5fa8;
+  --blue-l:   #e8f0fb;
+  --sans:     'Outfit', sans-serif;
+  --mono:     'JetBrains Mono', monospace;
+  --r:        10px;
+  --r-sm:     6px;
+}
+
+html { background: var(--bg); color: var(--ink); font-family: var(--sans); }
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, var(--line) 39px, var(--line) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,0,0,0.025) 39px, rgba(0,0,0,0.025) 40px);
+}
+
+/* TOPBAR */
+.topbar {
+  background: var(--ink);
+  padding: 0 2rem;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.logo { font-family: var(--mono); font-size: 13px; font-weight: 500; color: #fff; letter-spacing: 0.04em; }
+.logo span { color: var(--accent); }
+.topbar-right { font-family: var(--mono); font-size: 10px; color: rgba(255,255,255,0.35); }
+
+/* LAYOUT */
+.page { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+
+.page-header { margin-bottom: 2rem; }
+.page-eyebrow { font-family: var(--mono); font-size: 10px; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 8px; }
+.page-title { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; color: var(--ink); line-height: 1.1; }
+.page-desc { font-size: 14px; color: var(--ink2); margin-top: 8px; line-height: 1.6; max-width: 520px; }
+
+/* TWO COLUMN */
+.layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start; }
+
+/* PANEL */
+.panel {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.panel-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.panel-title { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink2); }
+.panel-body { padding: 1.25rem; }
+
+/* COLUMN HEADERS */
+.col-headers {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 32px;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+.col-label {
+  font-family: var(--mono); font-size: 10px; color: var(--ink3);
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+
+/* ROW */
+.rows-wrap { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 32px;
+  gap: 8px;
+  align-items: center;
+  animation: rowIn 0.2s ease;
+}
+@keyframes rowIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+.row input {
+  width: 100%; padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-family: var(--sans); font-size: 13px; color: var(--ink);
+  background: var(--bg);
+  outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+  -moz-appearance: textfield;
+}
+.row input::-webkit-inner-spin-button,
+.row input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(212,86,30,0.1); }
+.row input.label-input { font-weight: 500; }
+.row input.num-input { font-family: var(--mono); font-size: 13px; text-align: right; }
+.row input.error { border-color: #e04040; background: #fff5f5; }
+
+.del-btn {
+  width: 28px; height: 28px;
+  background: none; border: 1px solid var(--line);
+  border-radius: var(--r-sm); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink3); font-size: 14px; font-weight: 300;
+  transition: all 0.15s;
+}
+.del-btn:hover { background: #fff0f0; border-color: #e04040; color: #e04040; }
+
+/* BUTTONS */
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  padding: 8px 16px; border-radius: var(--r-sm);
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  cursor: pointer; border: none; transition: all 0.15s;
+}
+.btn-ghost {
+  background: var(--bg3); color: var(--ink2); border: 1px solid var(--line);
+}
+.btn-ghost:hover { background: var(--line); color: var(--ink); }
+.btn-primary {
+  background: var(--accent); color: #fff;
+  box-shadow: 0 2px 8px rgba(212,86,30,0.25);
+}
+.btn-primary:hover { background: #b8461a; box-shadow: 0 2px 12px rgba(212,86,30,0.35); }
+.btn-primary:active { transform: scale(0.98); }
+
+/* ALPHA CONTROLS */
+.alpha-row {
+  display: flex; align-items: center; gap: 10px; margin-top: 12px;
+  padding-top: 12px; border-top: 1px solid var(--line);
+}
+.alpha-label { font-size: 12px; color: var(--ink2); }
+.alpha-chips { display: flex; gap: 6px; }
+.chip {
+  font-family: var(--mono); font-size: 11px; padding: 4px 10px;
+  border: 1px solid var(--line); border-radius: 100px;
+  cursor: pointer; background: var(--bg3); color: var(--ink2);
+  transition: all 0.15s;
+}
+.chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+/* RESULTS PANEL */
+.results-placeholder {
+  padding: 2rem;
+  text-align: center;
+  color: var(--ink3);
+  font-size: 13px;
+}
+.results-placeholder svg { display: block; margin: 0 auto 12px; opacity: 0.3; }
+
+/* RESULT METRICS */
+.result-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+.rm { background: var(--bg3); border-radius: var(--r-sm); padding: 12px 14px; }
+.rm-label { font-family: var(--mono); font-size: 9px; color: var(--ink3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.rm-val { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.rm-val.accent { color: var(--accent); }
+.rm-val.green  { color: var(--green); }
+.rm-val.blue   { color: var(--blue); }
+.rm-val.amber  { color: var(--amber); }
+
+/* VERDICT */
+.verdict {
+  border-radius: var(--r-sm); padding: 12px 14px;
+  display: flex; gap: 10px; align-items: flex-start;
+  margin-bottom: 1rem;
+}
+.verdict.independent { background: var(--green-l); border: 1px solid #b8e0c8; }
+.verdict.dependent   { background: var(--accent-l); border: 1px solid #f2c4b0; }
+.v-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.v-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.verdict.independent .v-title { color: var(--green); }
+.verdict.dependent   .v-title { color: var(--accent); }
+.v-desc { font-size: 12px; color: var(--ink2); line-height: 1.5; }
+
+/* EXPECTED TABLE */
+.exp-label { font-family: var(--mono); font-size: 10px; color: var(--ink3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+.exp-table-wrap { overflow-x: auto; }
+table.exp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.exp-table th {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink3); padding: 5px 8px; border-bottom: 1px solid var(--line); text-align: right;
+}
+table.exp-table th:first-child { text-align: left; }
+table.exp-table td {
+  padding: 6px 8px; border-bottom: 1px solid var(--line);
+  text-align: right; font-family: var(--mono); font-size: 11px; color: var(--ink2);
+}
+table.exp-table td:first-child { text-align: left; font-family: var(--sans); color: var(--ink); font-size: 12px; font-weight: 500; }
+table.exp-table tr:last-child td { border-bottom: none; }
+.contrib-pill {
+  display: inline-block; padding: 1px 6px; border-radius: 100px;
+  font-size: 10px; font-weight: 500;
+}
+.contrib-high { background: var(--accent-l); color: var(--accent); }
+.contrib-low  { background: var(--green-l);  color: var(--green); }
+
+/* CHART */
+.chart-section { margin-top: 1.5rem; }
+.chart-panel { background: var(--bg2); border: 1px solid var(--line); border-radius: var(--r); padding: 1.25rem; }
+
+/* ERROR MSG */
+.error-msg { background: #fff5f5; border: 1px solid #fcc; border-radius: var(--r-sm); padding: 10px 14px; font-size: 12px; color: #c04040; margin-bottom: 10px; display: none; }
+.error-msg.show { display: block; }
+
+@keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+.page-header { animation: fadeUp 0.4s ease; }
+.layout      { animation: fadeUp 0.4s 0.1s ease both; }
+
+@media (max-width: 800px) {
+  .layout { grid-template-columns: 1fr; }
+  .page { padding: 1.5rem 1rem 3rem; }
+  .result-metrics { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">χ²<span>Calc</span></div>
+  <div class="topbar-right">Chi-Square Test of Independence</div>
+</div>
+
+<div class="page">
+  <div class="page-header">
+    <div class="page-eyebrow">Statistical Tool</div>
+    <div class="page-title">Chi-Square Calculator</div>
+    <div class="page-desc">Enter your observed frequency table below. Add as many categories as needed, then click Calculate to run the test.</div>
+  </div>
+
+  <div class="layout">
+
+    <!-- INPUT PANEL -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Observed Frequencies</div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--ink3);" id="rowCount">3 rows</div>
+        </div>
+        <div class="panel-body">
+          <div class="error-msg" id="errMsg"></div>
+
+          <div class="col-headers">
+            <div class="col-label">Category</div>
+            <div class="col-label" style="text-align:right;">Group A</div>
+            <div class="col-label" style="text-align:right;">Group B</div>
+            <div></div>
+          </div>
+
+          <div class="rows-wrap" id="rowsWrap"></div>
+
+          <div class="btn-row" style="margin-bottom:0;">
+            <button class="btn btn-ghost" onclick="addRow()">+ Add row</button>
+            <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+            <button class="btn btn-primary" onclick="calculate()">Calculate →</button>
+          </div>
+
+          <div class="alpha-row">
+            <span class="alpha-label">Significance α =</span>
+            <div class="alpha-chips" id="alphaChips">
+              <div class="chip" data-val="0.10" onclick="setAlpha(this)">0.10</div>
+              <div class="chip active" data-val="0.05" onclick="setAlpha(this)">0.05</div>
+              <div class="chip" data-val="0.01" onclick="setAlpha(this)">0.01</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLUMN RENAME -->
+      <div class="panel" style="margin-top:1rem;">
+        <div class="panel-header">
+          <div class="panel-title">Column Labels</div>
+        </div>
+        <div class="panel-body" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div>
+            <div style="font-size:11px;color:var(--ink2);margin-bottom:4px;">Group A label</div>
+            <input id="colA" type="text" value="Booked" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm);font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--bg);outline:none;" oninput="updateColHeaders()" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--line)'"/>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--ink2);margin-bottom:4px;">Group B label</div>
+            <input id="colB" type="text" value="Not Booked" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-sm);font-family:var(--sans);font-size:13px;color:var(--ink);background:var(--bg);outline:none;" oninput="updateColHeaders()" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--line)'"/>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS PANEL -->
+    <div>
+      <div class="panel" id="resultsPanel">
+        <div class="panel-header">
+          <div class="panel-title">Results</div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--ink3);" id="tsLabel">—</div>
+        </div>
+        <div class="panel-body" id="resultsBody">
+          <div class="results-placeholder">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <rect x="4" y="4" width="32" height="32" rx="6" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M12 20h16M20 12v16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            Enter data and click Calculate to see results
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART SECTION -->
+  <div class="chart-section" id="chartSection" style="display:none;">
+    <div class="chart-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink2);">Observed vs Expected Frequencies</div>
+        <div style="display:flex;gap:14px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink2);">
+            <div style="width:10px;height:10px;border-radius:2px;background:#d4561e;"></div>Observed
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink2);">
+            <div style="width:10px;height:10px;border-radius:2px;background:#1a5fa8;"></div>Expected
+          </div>
+        </div>
+      </div>
+      <div style="position:relative;height:240px;"><canvas id="mainChart"></canvas></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let alpha = 0.05;
+let chartInst = null;
+let rowId = 0;
+
+const defaultRows = [
+  { label: 'Car',     a: 300, b: 2 },
+  { label: 'Bike',    a: 200, b: 3 },
+  { label: 'Truck',   a: 250, b: 4 },
+  { label: 'Rikshaw', a: 100, b: 5 },
+  { label: 'Boat',    a: 400, b: 7 },
+];
+
+function setAlpha(el) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  alpha = parseFloat(el.dataset.val);
+}
+
+function updateColHeaders() {
+  const a = document.getElementById('colA').value || 'A';
+  const b = document.getElementById('colB').value || 'B';
+  document.querySelectorAll('.col-label')[1].textContent = a;
+  document.querySelectorAll('.col-label')[2].textContent = b;
+}
+
+function addRow(label='', a='', b='') {
+  const id = ++rowId;
+  const wrap = document.getElementById('rowsWrap');
+  const div = document.createElement('div');
+  div.className = 'row';
+  div.id = 'row-' + id;
+  div.innerHTML = `
+    <input class="label-input" type="text" placeholder="Category" value="${label}" />
+    <input class="num-input" type="number" min="0" step="1" placeholder="0" value="${a}" />
+    <input class="num-input" type="number" min="0" step="1" placeholder="0" value="${b}" />
+    <button class="del-btn" onclick="deleteRow(${id})">×</button>
+  `;
+  wrap.appendChild(div);
+  updateRowCount();
+}
+
+function deleteRow(id) {
+  const el = document.getElementById('row-' + id);
+  if (el) el.remove();
+  updateRowCount();
+}
+
+function clearAll() {
+  document.getElementById('rowsWrap').innerHTML = '';
+  rowId = 0;
+  addRow(); addRow(); addRow();
+  resetResults();
+}
+
+function updateRowCount() {
+  const n = document.getElementById('rowsWrap').children.length;
+  document.getElementById('rowCount').textContent = n + ' row' + (n !== 1 ? 's' : '');
+}
+
+function resetResults() {
+  document.getElementById('tsLabel').textContent = '—';
+  document.getElementById('resultsBody').innerHTML = `
+    <div class="results-placeholder">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <rect x="4" y="4" width="32" height="32" rx="6" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M12 20h16M20 12v16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      Enter data and click Calculate to see results
+    </div>`;
+  document.getElementById('chartSection').style.display = 'none';
+}
+
+function showError(msg) {
+  const el = document.getElementById('errMsg');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+function getRows() {
+  const rows = document.getElementById('rowsWrap').querySelectorAll('.row');
+  const data = [];
+  for (const row of rows) {
+    const inputs = row.querySelectorAll('input');
+    const label = inputs[0].value.trim() || ('Row ' + (data.length + 1));
+    const a = parseFloat(inputs[1].value);
+    const b = parseFloat(inputs[2].value);
+    inputs[1].classList.toggle('error', isNaN(a) || a < 0);
+    inputs[2].classList.toggle('error', isNaN(b) || b < 0);
+    if (isNaN(a) || a < 0 || isNaN(b) || b < 0) return null;
+    data.push({ label, a, b });
+  }
+  return data;
+}
+
+function chiSquare(observed) {
+  const rowTotals = observed.map(r => r[0] + r[1]);
+  const colA = observed.reduce((s, r) => s + r[0], 0);
+  const colB = observed.reduce((s, r) => s + r[1], 0);
+  const total = colA + colB;
+
+  const expected = observed.map((r, i) => [
+    rowTotals[i] * colA / total,
+    rowTotals[i] * colB / total
+  ]);
+
+  let chi2 = 0;
+  const contribs = [];
+  for (let i = 0; i < observed.length; i++) {
+    for (let j = 0; j < 2; j++) {
+      const o = observed[i][j], e = expected[i][j];
+      const c = e > 0 ? Math.pow(o - e, 2) / e : 0;
+      chi2 += c;
+      contribs.push(c);
+    }
+  }
+
+  const dof = (observed.length - 1) * 1;
+  const p = 1 - chiCDF(chi2, dof);
+  return { chi2, dof, p, expected, rowTotals, colA, colB, total, contribs };
+}
+
+// Chi-squared CDF via regularized incomplete gamma (series approximation)
+function chiCDF(x, k) {
+  return regularizedGamma(k / 2, x / 2);
+}
+function regularizedGamma(a, x) {
+  if (x < 0) return 0;
+  if (x === 0) return 0;
+  let sum = 1 / a, term = 1 / a;
+  for (let i = 1; i < 200; i++) {
+    term *= x / (a + i);
+    sum += term;
+    if (term < 1e-10) break;
+  }
+  return Math.min(1, sum * Math.exp(-x + a * Math.log(x) - logGamma(a)));
+}
+function logGamma(z) {
+  const c = [76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  let x = z, y = z, tmp = x + 5.5;
+  tmp -= (x + 0.5) * Math.log(tmp);
+  let ser = 1.000000000190015;
+  for (let j = 0; j < 6; j++) { y++; ser += c[j] / y; }
+  return -tmp + Math.log(2.5066282746310005 * ser / x);
+}
+
+function pValueLabel(p) {
+  if (p < 0.001) return '< 0.001';
+  return p.toFixed(4);
+}
+
+function calculate() {
+  const rows = getRows();
+  if (!rows) return showError('All cells must have valid non-negative numbers.');
+  if (rows.length < 2) return showError('Need at least 2 rows.');
+
+  const colALabel = document.getElementById('colA').value || 'Group A';
+  const colBLabel = document.getElementById('colB').value || 'Group B';
+
+  const observed = rows.map(r => [r.a, r.b]);
+  const { chi2, dof, p, expected, contribs } = chiSquare(observed);
+  const dependent = p < alpha;
+  const maxContrib = Math.max(...contribs);
+
+  document.getElementById('tsLabel').textContent = 'χ²=' + chi2.toFixed(4);
+
+  // Expected cell warning
+  const minExpected = Math.min(...expected.flat());
+  const warnMsg = minExpected < 5
+    ? `<div style="background:var(--amber-l);border:1px solid #f5d98a;border-radius:var(--r-sm);padding:8px 12px;font-size:11px;color:var(--amber);margin-bottom:10px;">⚠ Min expected cell = ${minExpected.toFixed(2)} &lt; 5 — test reliability may be reduced.</div>`
+    : '';
+
+  // Expected table
+  let tableRows = '';
+  rows.forEach((r, i) => {
+    const cA = contribs[i * 2], cB = contribs[i * 2 + 1];
+    const cAClass = cA > maxContrib * 0.5 ? 'contrib-high' : 'contrib-low';
+    const cBClass = cB > maxContrib * 0.5 ? 'contrib-high' : 'contrib-low';
+    tableRows += `<tr>
+      <td>${r.label}</td>
+      <td>${r.a} <span style="color:var(--ink3);font-size:9px;">(${expected[i][0].toFixed(1)})</span></td>
+      <td>${r.b} <span style="color:var(--ink3);font-size:9px;">(${expected[i][1].toFixed(1)})</span></td>
+      <td><span class="contrib-pill ${cAClass}">${cA.toFixed(3)}</span></td>
+      <td><span class="contrib-pill ${cBClass}">${cB.toFixed(3)}</span></td>
+    </tr>`;
+  });
+
+  document.getElementById('resultsBody').innerHTML = `
+    ${warnMsg}
+    <div class="result-metrics">
+      <div class="rm"><div class="rm-label">Chi-Square χ²</div><div class="rm-val accent">${chi2.toFixed(4)}</div></div>
+      <div class="rm"><div class="rm-label">p-value</div><div class="rm-val ${dependent ? 'accent' : 'green'}">${pValueLabel(p)}</div></div>
+      <div class="rm"><div class="rm-label">Degrees of freedom</div><div class="rm-val blue">${dof}</div></div>
+      <div class="rm"><div class="rm-label">Significance α</div><div class="rm-val amber">${alpha}</div></div>
+    </div>
+
+    <div class="verdict ${dependent ? 'dependent' : 'independent'}">
+      <div class="v-icon">${dependent ? '⚡' : '✓'}</div>
+      <div>
+        <div class="v-title">${dependent ? 'Variables are Dependent' : 'Variables are Independent'}</div>
+        <div class="v-desc">p = ${pValueLabel(p)} is ${dependent ? 'less than' : 'greater than'} α = ${alpha} — we ${dependent ? 'reject' : 'fail to reject'} H₀.</div>
+      </div>
+    </div>
+
+    <div class="exp-label">Observed (Expected) · Chi contributions</div>
+    <div class="exp-table-wrap">
+      <table class="exp-table">
+        <thead>
+          <tr>
+            <th style="text-align:left;">Category</th>
+            <th>${colALabel}</th>
+            <th>${colBLabel}</th>
+            <th>χ² (${colALabel})</th>
+            <th>χ² (${colBLabel})</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+  `;
+
+  // Chart
+  document.getElementById('chartSection').style.display = 'block';
+  const labels = rows.map(r => r.label);
+  const obsA = rows.map(r => r.a), obsB = rows.map(r => r.b);
+  const expA = expected.map(e => parseFloat(e[0].toFixed(2)));
+  const expB = expected.map(e => parseFloat(e[1].toFixed(2)));
+
+  if (chartInst) chartInst.destroy();
+  chartInst = new Chart(document.getElementById('mainChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Obs ' + colALabel, data: obsA, backgroundColor: 'rgba(212,86,30,0.85)', borderRadius: 3, borderSkipped: false },
+        { label: 'Exp ' + colALabel, data: expA, backgroundColor: 'rgba(212,86,30,0.25)', borderRadius: 3, borderSkipped: false, borderWidth: 1, borderColor: '#d4561e' },
+        { label: 'Obs ' + colBLabel, data: obsB, backgroundColor: 'rgba(26,95,168,0.85)', borderRadius: 3, borderSkipped: false },
+        { label: 'Exp ' + colBLabel, data: expB, backgroundColor: 'rgba(26,95,168,0.25)', borderRadius: 3, borderSkipped: false, borderWidth: 1, borderColor: '#1a5fa8' },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1916', titleColor: '#f7f5f0', bodyColor: '#b0ada6',
+          borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1,
+          titleFont: { family: 'JetBrains Mono', size: 11 }, bodyFont: { family: 'JetBrains Mono', size: 11 }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#6b6860', font: { family: 'Outfit', size: 12 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#6b6860', font: { family: 'JetBrains Mono', size: 10 } } }
+      }
+    }
+  });
+}
+
+// Init
+defaultRows.forEach(r => addRow(r.label, r.a, r.b));
+updateColHeaders();
+</script>
+</body>
+</html>
